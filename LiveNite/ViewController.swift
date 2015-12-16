@@ -11,6 +11,7 @@ import MediaPlayer
 import MobileCoreServices
 import AVFoundation
 import CoreData
+import CoreLocation
 
 var appDel = (UIApplication.sharedApplication().delegate as! AppDelegate)
 var context:NSManagedObjectContext = appDel.managedObjectContext!
@@ -22,13 +23,14 @@ var idInc : Int = 1
 var noColumns: Int = 2
 var imgSize: Int = 100
 
+//variable for location
+var userLocation = CLLocationCoordinate2D()
+var locationUpdated = false
 
 
 
 
-
-
-class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIGestureRecognizerDelegate, UIScrollViewDelegate,  UICollectionViewDelegateFlowLayout, UICollectionViewDataSource{
+class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIGestureRecognizerDelegate, UIScrollViewDelegate,  UICollectionViewDelegateFlowLayout, UICollectionViewDataSource, CLLocationManagerDelegate{
     
     @IBOutlet weak var scroller: UIScrollView!
     
@@ -36,6 +38,9 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     var tableView : UITableView!
     
     @IBOutlet var collectionView: UICollectionView?
+    
+    //variable for accessing location
+    var locationManager = CLLocationManager()
     
     
     let captureSession = AVCaptureSession()
@@ -60,10 +65,15 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         //collectionView!.backgroundColor = UIColor(red: 42/255, green: 34/255, blue: 34/255, alpha: 1)
         self.view.addSubview(collectionView!)
         
-        
-        
-        
-        
+        //location settings
+        //needs better error checking
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        if #available(iOS 8.0, *) {
+            locationManager.requestWhenInUseAuthorization()
+        } else {
+            // Fallback on earlier versions
+        }
         
         
         // Do any additional setup after loading the view, typically from a nib.
@@ -107,8 +117,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
                 
                 
                 
-                
-                
+            
             }
         }
         let imageContainer = UIImageView(frame: CGRectMake(0, 0, 120, 160))
@@ -153,6 +162,19 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     }
     
     //end auto layout code
+    
+    //get user location function
+    //all you need to do to get user location is locationManager.startUpdatingLocation()
+    //it will start getting the users location in the background 
+    //call it when they open the camera to take a picture so it has a few seconds to settle
+    //store userLocation in the database once picture is taken (error check to make sure it got a location)
+    //call locationManager.stopUpdatingLocation once location has been stored and reset locationUpdated to false
+    
+    func locationManager(manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        userLocation = locations[0].coordinate
+        print("\(userLocation.latitude) Degrees Latitude, \(userLocation.longitude) Degrees Longitude")
+        locationUpdated = true
+    }
     
     func viewPost(img: AnyObject){
         let imageContainer = UIImageView(frame: CGRectMake(0, 0, 220, 260))
@@ -311,6 +333,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         
         
         
+        locationManager.startUpdatingLocation()
         
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.Camera) {
             
@@ -334,6 +357,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         else {
             print("Camera not available.")
         }
+        
     }
     
     
@@ -539,7 +563,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             
         }
        
-        self.tableView.reloadData()
+        self.collectionView?.reloadData()
         
     }
     
@@ -567,10 +591,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             } catch _ {
             }
         }
-        
         return currentID
     }
-
-
 }
 
