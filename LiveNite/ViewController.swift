@@ -18,7 +18,9 @@ var upVoteInc : CGFloat = 5
 var imageUpvotes = UILabel(frame: CGRectMake(150, upVoteInc, 30, 25))
 var idInc : Int = 1
 
-
+//variables for auto layout code
+var noColumns: Int = 2
+var imgSize: Int = 100
 
 
 
@@ -43,8 +45,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         let layout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
-        layout.sectionInset = UIEdgeInsets(top: 40, left: 0, bottom: 40, right: 5)
-        layout.itemSize = CGSize(width: 120, height: 160)
+        //layout.sectionInset = UIEdgeInsets(top: 40, left: 0, bottom: 40, right: 5)
+        //layout.itemSize = CGSize(width: 120, height: 160)
         //collectionView = UICollectionView(fr, collectionViewLayout: layout)
         collectionView?.dataSource = self
         collectionView!.delegate = self
@@ -81,7 +83,6 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         let cell = collectionView.dequeueReusableCellWithReuseIdentifier("CollectionViewCell", forIndexPath: indexPath) as UICollectionViewCell
         cell.backgroundColor = UIColor.yellowColor()
         
-        
         let fetchRequest = NSFetchRequest(entityName: "Entity")
         cell.backgroundColor = UIColor.blackColor()
         
@@ -102,6 +103,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
                 let upVoteData : AnyObject? = loc.valueForKey("upvotes")
                 let upVotes = upVoteData as? Int
                 upVoteArray.append(upVotes!)
+
                 
                 
                 
@@ -124,6 +126,33 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         print("cell")
         return cell
     }
+    
+    //begin auto layout code
+    
+    //set size of each square cell to imgSize
+    func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: NSIndexPath) -> CGSize {
+        let size = CGSize(width: imgSize, height: imgSize)
+        return size
+    }
+    
+    //calculate offset based on screensize, number of columns, and size of cell then use it to apply the inset
+    func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAtIndex section: Int) -> UIEdgeInsets {
+        let screenSize: CGRect = UIScreen.mainScreen().bounds
+        let screenWidth = screenSize.width
+        let offset = (screenWidth - CGFloat(noColumns*imgSize)) / CGFloat(noColumns+1)
+        let sectionInset = UIEdgeInsets(top: offset/2, left: offset, bottom: offset/2, right: offset)
+        return sectionInset
+    }
+    
+    //calculate offset based on screensize, number of columns, and size of cell then use it to set space between lines
+    func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAtIndex section: Int) -> CGFloat{
+        let screenSize: CGRect = UIScreen.mainScreen().bounds
+        let screenWidth = screenSize.width
+        let offset = (screenWidth - CGFloat(noColumns*imgSize)) / CGFloat(2*(noColumns+1))
+        return offset
+    }
+    
+    //end auto layout code
     
     func viewPost(img: AnyObject){
         let imageContainer = UIImageView(frame: CGRectMake(0, 0, 220, 260))
