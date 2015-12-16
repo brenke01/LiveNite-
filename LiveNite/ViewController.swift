@@ -75,7 +75,6 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             // Fallback on earlier versions
         }
         
-        
         // Do any additional setup after loading the view, typically from a nib.
     }
     
@@ -331,12 +330,10 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     @IBAction func capVideo() {
         
-        
-        
         locationManager.startUpdatingLocation()
         
+        
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.Camera) {
-            
             
             print("captureVideoPressed and camera available.")
             
@@ -371,6 +368,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     
     func imagePickerController(picker: UIImagePickerController, didFinishPickingMediaWithInfo info:[String : AnyObject]) {
+        
         
         
         if let newVideo = NSEntityDescription.insertNewObjectForEntityForName("Entity", inManagedObjectContext:context) as? NSManagedObject{
