@@ -21,11 +21,13 @@ var idInc : Int = 1
 
 //variables for auto layout code
 var noColumns: Int = 2
-var imgSize: Int = 100
+var imgWidth = 120
+var imgHeight = 160
 
 //variable for location
 var userLocation = CLLocationCoordinate2D()
 var locationUpdated = false
+
 
 
 
@@ -46,6 +48,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     let captureSession = AVCaptureSession()
     var previewLayer : AVCaptureVideoPreviewLayer?
     var captureDevice : AVCaptureDevice?
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
@@ -119,7 +123,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             
             }
         }
-        let imageContainer = UIImageView(frame: CGRectMake(0, 0, 120, 160))
+        let imageContainer = UIImageView(frame: CGRectMake(0, 0, CGFloat(imgWidth), CGFloat(imgHeight)))
         imageContainer.image = imageArray[indexPath.row]
         let tapGestureRecognizer = UITapGestureRecognizer(target:self, action:Selector("viewPost:"))
         imageContainer.userInteractionEnabled = true
@@ -139,7 +143,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     //set size of each square cell to imgSize
     func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: NSIndexPath) -> CGSize {
-        let size = CGSize(width: imgSize, height: imgSize)
+        let size = CGSize(width: imgWidth, height: imgHeight)
         return size
     }
     
@@ -147,7 +151,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAtIndex section: Int) -> UIEdgeInsets {
         let screenSize: CGRect = UIScreen.mainScreen().bounds
         let screenWidth = screenSize.width
-        let offset = (screenWidth - CGFloat(noColumns*imgSize)) / CGFloat(noColumns+1)
+        let offset = (screenWidth - CGFloat(noColumns*imgWidth)) / CGFloat(noColumns+1)
         let sectionInset = UIEdgeInsets(top: offset/2, left: offset, bottom: offset/2, right: offset)
         return sectionInset
     }
@@ -156,7 +160,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAtIndex section: Int) -> CGFloat{
         let screenSize: CGRect = UIScreen.mainScreen().bounds
         let screenWidth = screenSize.width
-        let offset = (screenWidth - CGFloat(noColumns*imgSize)) / CGFloat(2*(noColumns+1))
+        let offset = (screenWidth - CGFloat(noColumns*imgWidth)) / CGFloat(2*(noColumns+1))
         return offset
     }
     
@@ -177,20 +181,25 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     func viewPost(img: AnyObject){
         let imageContainer = UIImageView(frame: CGRectMake(0, 0, 220, 260))
-        print("test")
         var tapLocation = img.locationInView(self.collectionView)
         var indexPath : NSIndexPath = (self.collectionView?.indexPathForItemAtPoint(tapLocation)!)!
         var image = UIImage()
-       
         if let cell = self.collectionView?.cellForItemAtIndexPath(indexPath){
             print(cell.subviews)
             var imageView = cell.subviews[1] as! UIImageView
             image = imageView.image!
         }
-        var imageCon = UIImageView()
-        imageContainer.image = image
-        self.view.addSubview(imageContainer)
+        self.performSegueWithIdentifier("viewPost", sender: image)
     }
+    
+    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+        if segue.identifier == "viewPost" {
+            if let destinationVC = segue.destinationViewController as? viewPostController{
+                destinationVC.imageTapped = sender as! UIImage
+            }
+        }
+    }
+    
 
     /*func tableView(tableView: UITableView, numberOfRowsInSection section: Int)-> Int {
         let fetchRequest = NSFetchRequest(entityName: "Entity")
@@ -394,7 +403,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             print("saved successfully", terminator: "")
             
             dismissViewControllerAnimated(true, completion: nil)
-            self.tableView.reloadData()
+            locationManager.stopUpdatingLocation()  
+            self.collectionView!.reloadData()
             
             
             
@@ -522,7 +532,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             
         }
         userUpvoted(id)
-        self.tableView.reloadData()
+        self.collectionView!.reloadData()
         
     }
     
