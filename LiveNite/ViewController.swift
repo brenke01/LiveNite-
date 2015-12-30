@@ -11,6 +11,7 @@ import MediaPlayer
 import MobileCoreServices
 import AVFoundation
 import CoreData
+import CoreLocation
 
 var appDel = (UIApplication.sharedApplication().delegate as! AppDelegate)
 var context:NSManagedObjectContext = appDel.managedObjectContext!
@@ -18,15 +19,20 @@ var upVoteInc : CGFloat = 5
 var imageUpvotes = UILabel(frame: CGRectMake(150, upVoteInc, 30, 25))
 var idInc : Int = 1
 
+//variables for auto layout code
+var noColumns: Int = 2
+var imgWidth = 120
+var imgHeight = 160
+
+//variable for location
+var userLocation = CLLocationCoordinate2D()
+var locationUpdated = false
 
 
 
 
 
-
-
-
-class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIGestureRecognizerDelegate, UIScrollViewDelegate,  UICollectionViewDelegateFlowLayout, UICollectionViewDataSource{
+class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIGestureRecognizerDelegate, UIScrollViewDelegate,  UICollectionViewDelegateFlowLayout, UICollectionViewDataSource, CLLocationManagerDelegate{
     
     @IBOutlet weak var scroller: UIScrollView!
     
@@ -35,16 +41,21 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     @IBOutlet var collectionView: UICollectionView?
     
+    //variable for accessing location
+    var locationManager = CLLocationManager()
+    
     
     let captureSession = AVCaptureSession()
     var previewLayer : AVCaptureVideoPreviewLayer?
     var captureDevice : AVCaptureDevice?
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         let layout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
-        layout.sectionInset = UIEdgeInsets(top: 40, left: 0, bottom: 40, right: 5)
-        layout.itemSize = CGSize(width: 120, height: 160)
+        //layout.sectionInset = UIEdgeInsets(top: 40, left: 0, bottom: 40, right: 5)
+        //layout.itemSize = CGSize(width: 120, height: 160)
         //collectionView = UICollectionView(fr, collectionViewLayout: layout)
         collectionView?.dataSource = self
         collectionView!.delegate = self
@@ -58,11 +69,15 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         //collectionView!.backgroundColor = UIColor(red: 42/255, green: 34/255, blue: 34/255, alpha: 1)
         self.view.addSubview(collectionView!)
         
-        
-        
-        
-        
-        
+        //location settings
+        //needs better error checking
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        if #available(iOS 8.0, *) {
+            locationManager.requestWhenInUseAuthorization()
+        } else {
+            // Fallback on earlier versions
+        }
         
         // Do any additional setup after loading the view, typically from a nib.
     }
@@ -80,7 +95,6 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCellWithReuseIdentifier("CollectionViewCell", forIndexPath: indexPath) as UICollectionViewCell
         cell.backgroundColor = UIColor.yellowColor()
-        
         
         let fetchRequest = NSFetchRequest(entityName: "Entity")
         cell.backgroundColor = UIColor.blackColor()
@@ -102,45 +116,102 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
                 let upVoteData : AnyObject? = loc.valueForKey("upvotes")
                 let upVotes = upVoteData as? Int
                 upVoteArray.append(upVotes!)
+
                 
                 
                 
-                
-                
+            
             }
         }
-        let imageContainer = UIImageView(frame: CGRectMake(0, 0, 120, 160))
-        imageContainer.image = imageArray[indexPath.row]
-        let tapGestureRecognizer = UITapGestureRecognizer(target:self, action:Selector("viewPost:"))
-        imageContainer.userInteractionEnabled = true
-        imageContainer.addGestureRecognizer(tapGestureRecognizer)
+        var imageButton = UIButton(frame: CGRectMake(0, 0, CGFloat(imgWidth), CGFloat(imgHeight)))
+        imageButton.setImage(imageArray[indexPath.row], forState: .Normal)
+        imageButton.addTarget(self, action: "viewPost:", forControlEvents: .TouchUpInside)
+        imageButton.userInteractionEnabled = true
         
-        let layer = imageContainer.layer
+        imageButton.tag = idArray[indexPath.row]
+        let layer = imageButton.layer
         layer.shadowColor = UIColor.blackColor().CGColor
         layer.shadowOffset = CGSize(width: 0, height: 20)
         layer.shadowOpacity = 0.4
         layer.shadowRadius = 5
-        cell.addSubview(imageContainer)
+        cell.addSubview(imageButton)
         print("cell")
         return cell
     }
     
-    func viewPost(img: AnyObject){
-        let imageContainer = UIImageView(frame: CGRectMake(0, 0, 220, 260))
-        print("test")
-        var tapLocation = img.locationInView(self.collectionView)
-        var indexPath : NSIndexPath = (self.collectionView?.indexPathForItemAtPoint(tapLocation)!)!
-        var image = UIImage()
-       
-        if let cell = self.collectionView?.cellForItemAtIndexPath(indexPath){
-            print(cell.subviews)
-            var imageView = cell.subviews[1] as! UIImageView
-            image = imageView.image!
-        }
-        var imageCon = UIImageView()
-        imageContainer.image = image
-        self.view.addSubview(imageContainer)
+    //begin auto layout code
+    
+    //set size of each square cell to imgSize
+    func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: NSIndexPath) -> CGSize {
+        let size = CGSize(width: imgWidth, height: imgHeight)
+        return size
     }
+    
+    //calculate offset based on screensize, number of columns, and size of cell then use it to apply the inset
+    func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAtIndex section: Int) -> UIEdgeInsets {
+        let screenSize: CGRect = UIScreen.mainScreen().bounds
+        let screenWidth = screenSize.width
+        let offset = (screenWidth - CGFloat(noColumns*imgWidth)) / CGFloat(noColumns+1)
+        let sectionInset = UIEdgeInsets(top: offset/2, left: offset, bottom: offset/2, right: offset)
+        return sectionInset
+    }
+    
+    //calculate offset based on screensize, number of columns, and size of cell then use it to set space between lines
+    func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAtIndex section: Int) -> CGFloat{
+        let screenSize: CGRect = UIScreen.mainScreen().bounds
+        let screenWidth = screenSize.width
+        let offset = (screenWidth - CGFloat(noColumns*imgWidth)) / CGFloat(2*(noColumns+1))
+        return offset
+    }
+    
+    //end auto layout code
+    
+    //get user location function
+    //all you need to do to get user location is locationManager.startUpdatingLocation()
+    //it will start getting the users location in the background 
+    //call it when they open the camera to take a picture so it has a few seconds to settle
+    //store userLocation in the database once picture is taken (error check to make sure it got a location)
+    //call locationManager.stopUpdatingLocation once location has been stored and reset locationUpdated to false
+    
+    func locationManager(manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        userLocation = locations[0].coordinate
+        print("\(userLocation.latitude) Degrees Latitude, \(userLocation.longitude) Degrees Longitude")
+        locationUpdated = true
+    }
+    
+    func viewPost(sender: AnyObject){
+        print(sender)
+        self.performSegueWithIdentifier("viewPost", sender: sender.tag)
+    }
+    
+    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+        if segue.identifier == "viewPost" {
+            print("test")
+            if let destinationVC = segue.destinationViewController as? viewPostController{
+                
+                let fetchRequest = NSFetchRequest(entityName: "Entity")
+                
+                fetchRequest.predicate = NSPredicate(format: "id= %i", sender as! Int)
+                let images = (try? context.executeFetchRequest(fetchRequest)) as! [NSManagedObject]?
+                
+                if let images = images{
+                    for img in images{
+                        
+                        let imageID: AnyObject? = img.valueForKey("id")
+                        let imageUpvotes : AnyObject? =
+                            img.valueForKey("upvotes")
+                        let imageData : AnyObject? = img.valueForKey("videoData")
+                        destinationVC.imageUpvotes = (imageUpvotes as? Int)!
+                        print(imageID)
+                        destinationVC.imageTapped = UIImage(data: (imageData as? NSData)!)!
+                        destinationVC.imageID = (imageID as? Int)!
+                        
+                    }
+                }
+            }
+        }
+    }
+    
 
     /*func tableView(tableView: UITableView, numberOfRowsInSection section: Int)-> Int {
         let fetchRequest = NSFetchRequest(entityName: "Entity")
@@ -280,11 +351,10 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     @IBAction func capVideo() {
         
-        
+        locationManager.startUpdatingLocation()
         
         
         if UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.Camera) {
-            
             
             print("captureVideoPressed and camera available.")
             
@@ -305,6 +375,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         else {
             print("Camera not available.")
         }
+        
     }
     
     
@@ -318,6 +389,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     
     func imagePickerController(picker: UIImagePickerController, didFinishPickingMediaWithInfo info:[String : AnyObject]) {
+        
         
         
         if let newVideo = NSEntityDescription.insertNewObjectForEntityForName("Entity", inManagedObjectContext:context) as? NSManagedObject{
@@ -343,7 +415,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             print("saved successfully", terminator: "")
             
             dismissViewControllerAnimated(true, completion: nil)
-            self.tableView.reloadData()
+            locationManager.stopUpdatingLocation()  
+            self.collectionView!.reloadData()
             
             
             
@@ -471,7 +544,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             
         }
         userUpvoted(id)
-        self.tableView.reloadData()
+        self.collectionView!.reloadData()
         
     }
     
@@ -510,7 +583,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             
         }
        
-        self.tableView.reloadData()
+        self.collectionView?.reloadData()
         
     }
     
@@ -538,10 +611,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             } catch _ {
             }
         }
-        
         return currentID
     }
-
-
 }
 
